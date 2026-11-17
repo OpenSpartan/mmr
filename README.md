@@ -186,7 +186,7 @@ To build the setup, install [Inno Setup 7](https://jrsoftware.org/isinfo.php) an
 ISCC /DAppVersion=0.0.1 installer\mmr.iss
 ```
 
-Pushing a tag like `0.2.0` builds both the setup and the zip in CI, and drafts a release with the two attached. The tag is the version - there is nothing to bump in `Cargo.toml`.
+Pushing a tag like `0.2.0` builds both the setup and the zip in CI, and publishes a release with the two attached. The tag is the version - there is nothing to bump in `Cargo.toml`.
 
 ## FAQ
 
