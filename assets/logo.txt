@@ -1,0 +1,12 @@
+# The icon at 10 by 10 pixels, for the header of `mmr watch`.
+# Each pixel is an RGB color in hex, or . where it's clear.
+     .      .      . 263044 30425f      .      .      .      .      .
+     .      .      . 534f6c dc8a9f a3798d 8c819c c63f52      .      .
+     .      . 3b6388 9b8fc7 fb7b8b a50c11 b9090c ff0100 b91e21      .
+     . 092149 163294 397bdf d85c72 f20000 f30100 da0000 97495f      .
+041128 254ba3 0031c1 0e76f2 faa8b8 ff0000 ce0000 de0000 ac7992      .
+     . 0d388f 002396 0047bd c6caf2 ff0309 bb0000 bd0407 a1a1bf 465d79
+     . 0143d7 0025c8 003eb9 87daff ff383b d10000 ae7182 828ca8 525471
+     . 0950ff 045bff 0030c9 2d94f4 deacb2 ce7387 88c0e1 5b586f      .
+     .      . 0542ff 0022d2 001eac 698cc6 4b7495 294063      .      .
+     .      .      .      .      . 001635 17253f      .      .      .

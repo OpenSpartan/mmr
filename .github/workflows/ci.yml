@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+    # A release tag is the bare version, like 0.2.0.
+    tags: ["[0-9]+.[0-9]+.[0-9]+"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+# mmr only builds on Windows, so this runs on GitHub's Windows runners.
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --release --locked
+      # mmr trusts its own root and parses untrusted input, so a known advisory
+      # against a dependency in Cargo.lock fails the build.
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Advisories
+        run: cargo deny check advisories
+
+  # On a release tag, builds the installer from installer\mmr.iss and a zip that runs
+  # without installing, then drafts a release with both.
+  release:
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      INNO_URL: https://github.com/jrsoftware/issrc/releases/download/is-7_1_1/innosetup-7.1.1-x64.exe
+      INNO_SHA256: 8a5a6711c3766a6e5fb74f280ba0e3551e719ce94538d901fdbd1f8f9920b3f0
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: cargo build --release --locked
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          $setup = "$env:RUNNER_TEMP\innosetup.exe"
+          Invoke-WebRequest $env:INNO_URL -OutFile $setup
+          if ((Get-FileHash $setup -Algorithm SHA256).Hash -ne $env:INNO_SHA256) { throw "Inno Setup's download doesn't match its checksum" }
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/CURRENTUSER', '/PORTABLE=1', '/NOICONS', "/DIR=$env:RUNNER_TEMP\inno" -Wait -PassThru
+          if ($p.ExitCode) { throw "Inno Setup didn't install: $($p.ExitCode)" }
+      - name: Package
+        shell: pwsh
+        run: |
+          # The tag is the version. Cargo.toml's stays at 0.0.0.
+          $version = $env:GITHUB_REF_NAME
+          & "$env:RUNNER_TEMP\inno\ISCC.exe" /Q "/DAppVersion=$version" installer\mmr.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          # The same files the setup installs, without the setup.
+          $zip = "$env:RUNNER_TEMP\zip"
+          New-Item -ItemType Directory $zip | Out-Null
+          Copy-Item target\release\mmr.exe $zip
+          Copy-Item LICENSE "$zip\LICENSE.txt"
+          Compress-Archive "$zip\*" "target\installer\mmr-$version.zip"
+      - name: Draft a release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME (Get-ChildItem target\installer\*.exe, target\installer\*.zip).FullName --draft --generate-notes --title "mmr $env:GITHUB_REF_NAME"
